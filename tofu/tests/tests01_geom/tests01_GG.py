@@ -7,7 +7,6 @@ import os
 import sys
 import numpy as np
 import matplotlib
-matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.gridspec as mplgrid
