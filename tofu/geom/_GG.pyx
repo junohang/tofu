@@ -985,91 +985,62 @@ def _Ves_Vmesh_Tor_SubFromD_cython(double rstep, double zstep, double phistep,
     r_ratio = <int>(Cceil(disc_r[sz_r - 1] / disc_r[0]))
     twopi_over_dphi = _TWOPI / phistep
     ind_loc_r0 = 0
-    # ... doing 0 loop before
-    if min_phi < max_phi:
+    # .. Initialization Variables ..............................................
+    ncells_rphi0 = 0
+    NP = 0
+    # .. Discretizing Phi (with respect to the corresponding radius R) .........
+    for ii in range(sz_r):
         # Get the actual RPhi resolution and Phi mesh elements (! depends on R!)
-        ncells_rphi[0] = <int>Cceil(twopi_over_dphi * disc_r[0])
-        loc_nc_rphi = ncells_rphi[0]
-        step_rphi[0] = _TWOPI / ncells_rphi[0]
-        inv_drphi = 1. / step_rphi[0]
-        reso_phi_mv[0] = step_rphi[0] * disc_r[0]
-        tot_nc_plane[0] = 0 # initialization
+        ncells_rphi[ii] = <int>Cceil(twopi_over_dphi * disc_r[ii])
+        loc_nc_rphi = ncells_rphi[ii]
+        step_rphi[ii] = _TWOPI / ncells_rphi[ii]
+        inv_drphi = 1. / step_rphi[ii]
+        reso_phi_mv[ii] = step_rphi[ii] * disc_r[ii]
+        tot_nc_plane[ii] = 0 # initialization
         # Get index and cumulated indices from background
         for jj in range(ind_loc_r0, ncells_r0[0]):
-            if disc_r0[jj]==disc_r[0]:
+            if disc_r0[jj]==disc_r[ii]:
                 ind_loc_r0 = jj
                 break
             else:
                 ncells_rphi0 += <long>Cceil(twopi_over_dphi * disc_r0[jj])
-                tot_nc_plane[0] = ncells_rphi0 * ncells_z[0]
+                tot_nc_plane[ii] = ncells_rphi0 * ncells_z[0]
         # Get indices of phi
         # Get the extreme indices of the mesh elements that really need to
         # be created within those limits
-        if abs0 - step_rphi[0]*Cfloor(abs0 * inv_drphi) < margin*step_rphi[0]:
-            nphi0 = int(Cround((min_phi + Cpi) * inv_drphi))
-        else:
-            nphi0 = int(Cfloor((min_phi +Cpi) * inv_drphi))
-        if abs1-step_rphi[0]*Cfloor(abs1 * inv_drphi) < margin*step_rphi[0]:
-            nphi1 = int(Cround((max_phi+Cpi) * inv_drphi)-1)
-        else:
-            nphi1 = int(Cfloor((max_phi+Cpi) * inv_drphi))
-        sz_phi[0] = nphi1 + 1 - nphi0
-        max_sz_phi[0] = sz_phi[0]
-        indI = -np.ones((sz_r, sz_phi[0] * r_ratio + 1), dtype=int)
-        indi_mv = indI
-        for jj in range(sz_phi[0]):
-            indi_mv[0,jj] = nphi0+jj
-        NP += sz_z * sz_phi[0]
-    else:
-        # Get the actual RPhi resolution and Phi mesh elements (! depends on R!)
-        ncells_rphi[0] = <int>Cceil(twopi_over_dphi * disc_r[0])
-        loc_nc_rphi = ncells_rphi[0]
-        step_rphi[0] = _TWOPI / ncells_rphi[0]
-        inv_drphi = 1. / step_rphi[0]
-        reso_phi_mv[0] = step_rphi[0] * disc_r[0]
-        tot_nc_plane[0] = 0 # initialization
-        # Get index and cumulated indices from background
-        for jj in range(ind_loc_r0, ncells_r0[0]):
-            if disc_r0[jj]==disc_r[0]:
-                ind_loc_r0 = jj
-                break
-            else:
-                ncells_rphi0 += <long>Cceil(twopi_over_dphi * disc_r0[jj])
-                tot_nc_plane[0] = ncells_rphi0 * ncells_z[0]
-        # Get indices of phi
-        # Get the extreme indices of the mesh elements that really need to
-        # be created within those limits
-        if abs0 - step_rphi[0]*Cfloor(abs0 * inv_drphi) < margin*step_rphi[0]:
+        if abs0 - step_rphi[ii]*Cfloor(abs0 * inv_drphi) < margin*step_rphi[ii]:
             nphi0 = int(Cround((min_phi + Cpi) * inv_drphi))
         else:
             nphi0 = int(Cfloor((min_phi + Cpi) * inv_drphi))
-        if abs1-step_rphi[0]*Cfloor(abs1 * inv_drphi) < margin*step_rphi[0]:
+            abs1 = Cabs(max_phi + Cpi)
+        if abs1-step_rphi[ii]*Cfloor(abs1 * inv_drphi) < margin*step_rphi[ii]:
             nphi1 = int(Cround((max_phi+Cpi) * inv_drphi)-1)
         else:
             nphi1 = int(Cfloor((max_phi+Cpi) * inv_drphi))
-        sz_phi[0] = nphi1+1+loc_nc_rphi-nphi0
-        max_sz_phi[0] = sz_phi[0]
-        print("_________ taille indi =", sz_r, sz_phi[0] * r_ratio + 1)
-        indI = -np.ones((sz_r, sz_phi[0] * r_ratio + 1), dtype=int)
-        print("_________ indi 00 =", indI[0,0])
-        indi_mv = indI
-        print("_________ indi 00 =", indI[0,0])
-        print("_________ loop until =", loc_nc_rphi-nphi0, loc_nc_rphi, nphi0)
-        for jj in range(loc_nc_rphi-nphi0):
-            print("_____________ jj =", jj)
-            indi_mv[0,jj] = nphi0 + jj
-        for jj in range(loc_nc_rphi - nphi0, sz_phi[0]):
-            indi_mv[0,jj] = jj - (loc_nc_rphi - nphi0)
-        NP += sz_z * sz_phi[0]
-    print("size indi >>>>>>>><< ", sz_r, sz_phi[0] * r_ratio + 1)
-    # ... doing the others
-    print("doing the rest of the loop.....................")
-    NP += _st.vmesh_disc_phi(sz_r, sz_z, ncells_rphi, phistep,
-                             disc_r, disc_r0, step_rphi,
-                             reso_phi_mv, tot_nc_plane,
-                             ncells_r0[0], ncells_z[0], &max_sz_phi[0],
-                             min_phi, max_phi, sz_phi, indi_mv,
-                             margin, num_threads)
+        if min_phi < max_phi:
+            sz_phi[ii] = nphi1 + 1 - nphi0
+            if ii==0:
+                max_sz_phi[0] = sz_phi[ii]
+                indI = -np.ones((sz_r, sz_phi[ii] * r_ratio + 1), dtype=int)
+                indi_mv = indI
+            elif max_sz_phi[0] < sz_phi[ii]:
+                max_sz_phi[0] = sz_phi[ii]
+            for jj in range(sz_phi[ii]):
+                indi_mv[ii,jj] = nphi0+jj
+        else:
+            sz_phi[ii] = nphi1+1+loc_nc_rphi-nphi0
+            if ii==0:
+                max_sz_phi[0] = sz_phi[ii]
+                indI = -np.ones((sz_r, sz_phi[ii] * r_ratio + 1), dtype=int)
+                indi_mv = indI
+            elif max_sz_phi[0] < sz_phi[ii]:
+                max_sz_phi[0] = sz_phi[ii]
+            for jj in range(0,loc_nc_rphi-nphi0):
+                indi_mv[ii,jj] = nphi0 + jj
+            for jj in range(loc_nc_rphi - nphi0, sz_phi[ii]):
+                indi_mv[ii,jj] = jj - (loc_nc_rphi - nphi0)
+        NP += sz_z * sz_phi[ii]
+
     print("out of vmesh disc phi............................................")
     pts = np.empty((3,NP))
     ind = np.empty((NP,), dtype=int)
